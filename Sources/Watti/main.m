@@ -67,6 +67,15 @@ static NSString *WNLogDirectoryPath(void) {
     return [libraryPath stringByAppendingPathComponent:@"Logs/Watti"];
 }
 
+static NSArray<NSString *> *WNLegacyLogDirectoryPaths(void) {
+    NSArray<NSString *> *libraryPaths = NSSearchPathForDirectoriesInDomains(NSLibraryDirectory, NSUserDomainMask, YES);
+    NSString *libraryPath = libraryPaths.firstObject ?: [NSHomeDirectory() stringByAppendingPathComponent:@"Library"];
+    return @[
+        [libraryPath stringByAppendingPathComponent:@"Logs/WattNote"],
+        [libraryPath stringByAppendingPathComponent:@"Logs/Wattnote"],
+    ];
+}
+
 static NSString *WNLogFilePath(void) {
     if (WNLogPathCache == nil) {
         WNLogPathCache = [[WNLogDirectoryPath() stringByAppendingPathComponent:@"watti.log"] copy];
@@ -79,6 +88,15 @@ static NSString *WNAppSupportDirectoryPath(void) {
     NSArray<NSString *> *paths = NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory, NSUserDomainMask, YES);
     NSString *basePath = paths.firstObject ?: [NSHomeDirectory() stringByAppendingPathComponent:@"Library/Application Support"];
     return [basePath stringByAppendingPathComponent:@"Watti"];
+}
+
+static NSArray<NSString *> *WNLegacyAppSupportDirectoryPaths(void) {
+    NSArray<NSString *> *paths = NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory, NSUserDomainMask, YES);
+    NSString *basePath = paths.firstObject ?: [NSHomeDirectory() stringByAppendingPathComponent:@"Library/Application Support"];
+    return @[
+        [basePath stringByAppendingPathComponent:@"WattNote"],
+        [basePath stringByAppendingPathComponent:@"Wattnote"],
+    ];
 }
 
 static NSString *WNChargerNamesFilePath(void) {
@@ -100,6 +118,39 @@ static NSString *WNTimestampString(void) {
 
 static NSFont *WNUIFont(CGFloat size, NSFontWeight weight) {
     return [NSFont systemFontOfSize:size weight:weight];
+}
+
+static void WNMaybeMigrateLegacyFolders(void) {
+    NSFileManager *fm = [NSFileManager defaultManager];
+
+    NSString *newSupportDir = WNAppSupportDirectoryPath();
+    NSString *newSupportFile = WNChargerNamesFilePath();
+
+    if (![fm fileExistsAtPath:newSupportFile]) {
+        for (NSString *legacyDir in WNLegacyAppSupportDirectoryPaths()) {
+            NSString *legacyFile = [legacyDir stringByAppendingPathComponent:@"charger-names.plist"];
+            if ([fm fileExistsAtPath:legacyFile]) {
+                [fm createDirectoryAtPath:newSupportDir withIntermediateDirectories:YES attributes:nil error:nil];
+                [fm copyItemAtPath:legacyFile toPath:newSupportFile error:nil];
+                break;
+            }
+        }
+    }
+
+    NSString *newLogsDir = WNLogDirectoryPath();
+    BOOL newLogsExists = [fm fileExistsAtPath:newLogsDir];
+    if (!newLogsExists) {
+        for (NSString *legacyLogsDir in WNLegacyLogDirectoryPaths()) {
+            if ([fm fileExistsAtPath:legacyLogsDir]) {
+                [fm createDirectoryAtPath:[newLogsDir stringByDeletingLastPathComponent]
+              withIntermediateDirectories:YES
+                               attributes:nil
+                                    error:nil];
+                [fm moveItemAtPath:legacyLogsDir toPath:newLogsDir error:nil];
+                break;
+            }
+        }
+    }
 }
 
 static void WNEnsureLogFile(void) {
@@ -173,6 +224,7 @@ static void WNExceptionHandler(NSException *exception) {
 }
 
 static void WNInstallMonitoring(void) {
+    WNMaybeMigrateLegacyFolders();
     WNEnsureLogFile();
     WNLogLine(@"INFO", [NSString stringWithFormat:@"launch pid=%d macOS=%@ log=%@",
                                                   getpid(),
