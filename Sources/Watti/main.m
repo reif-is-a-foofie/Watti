@@ -98,6 +98,10 @@ static NSString *WNTimestampString(void) {
     return [formatter stringFromDate:[NSDate date]];
 }
 
+static NSFont *WNUIFont(CGFloat size, NSFontWeight weight) {
+    return [NSFont systemFontOfSize:size weight:weight];
+}
+
 static void WNEnsureLogFile(void) {
     if (WNLogFD != -1) {
         return;
@@ -573,21 +577,26 @@ static NSImage *WNStatusImage(BOOL onPower) {
         return nil;
     }
 
-    NSImage *image = [symbol copy];
-    image.size = NSMakeSize(13, 13);
-
-    if (onPower) {
-        if (@available(macOS 11.0, *)) {
-            NSImageSymbolConfiguration *configuration = [NSImageSymbolConfiguration configurationWithHierarchicalColor:NSColor.systemGreenColor];
-            NSImage *colored = [symbol imageWithSymbolConfiguration:configuration];
-            image = [colored copy];
-            image.size = NSMakeSize(13, 13);
+    if (@available(macOS 11.0, *)) {
+        NSImageSymbolConfiguration *base = [NSImageSymbolConfiguration configurationWithPointSize:13.0
+                                                                                           weight:NSFontWeightRegular
+                                                                                            scale:NSImageSymbolScaleSmall];
+        if (onPower) {
+            NSImageSymbolConfiguration *colored = [base configurationByApplyingConfiguration:
+                                                   [NSImageSymbolConfiguration configurationWithHierarchicalColor:NSColor.systemGreenColor]];
+            NSImage *image = [[symbol imageWithSymbolConfiguration:colored] copy];
             image.template = NO;
             return image;
         }
+
+        NSImage *image = [[symbol imageWithSymbolConfiguration:base] copy];
+        image.template = YES;
+        return image;
     }
 
-    image.template = YES;
+    NSImage *image = [symbol copy];
+    image.size = NSMakeSize(13, 13);
+    image.template = !onPower;
     return image;
 }
 
@@ -608,9 +617,9 @@ static NSAttributedString *WNStatusItemTitle(BOOL onPower, NSString *text) {
     }
 
     NSDictionary<NSAttributedStringKey, id> *attributes = @{
-        NSFontAttributeName: [NSFont monospacedDigitSystemFontOfSize:13 weight:NSFontWeightSemibold],
+        NSFontAttributeName: [NSFont monospacedDigitSystemFontOfSize:12.5 weight:NSFontWeightRegular],
         NSForegroundColorAttributeName: NSColor.labelColor,
-        NSKernAttributeName: @(-0.15)
+        NSKernAttributeName: @(-0.10)
     };
     [result appendAttributedString:[[NSAttributedString alloc] initWithString:text attributes:attributes]];
     return result;
@@ -759,6 +768,7 @@ static NSImage *WNBrandMarkImage(BOOL onPower, BOOL charging) {
     NSTextField *incomingLabel = [self makeLabel];
     incomingLabel.stringValue = nextText;
     incomingLabel.frame = NSOffsetRect(self.bounds, 0, increase ? -height : height);
+    incomingLabel.alphaValue = 0.0;
     [self addSubview:incomingLabel];
 
     self.currentLabel = incomingLabel;
@@ -766,12 +776,15 @@ static NSImage *WNBrandMarkImage(BOOL onPower, BOOL charging) {
     self.animating = YES;
 
     [NSAnimationContext runAnimationGroup:^(NSAnimationContext *context) {
-        context.duration = 0.2;
-        context.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut];
+        context.duration = 0.28;
+        context.timingFunction = [CAMediaTimingFunction functionWithControlPoints:0.18 :0.90 :0.22 :1.00];
         outgoingLabel.animator.frame = NSOffsetRect(self.bounds, 0, increase ? height : -height);
+        outgoingLabel.animator.alphaValue = 0.0;
         incomingLabel.animator.frame = self.bounds;
+        incomingLabel.animator.alphaValue = 1.0;
     } completionHandler:^{
         [outgoingLabel removeFromSuperview];
+        outgoingLabel.alphaValue = 1.0;
         self.animating = NO;
     }];
 }
@@ -971,6 +984,8 @@ static NSImage *WNBrandMarkImage(BOOL onPower, BOOL charging) {
 @property(nonatomic, strong) NSTextField *captionLabel;
 @property(nonatomic, strong) NSLayoutConstraint *captionHeightConstraint;
 @property(nonatomic, strong) NSTextField *brandLabel;
+@property(nonatomic, strong) NSTextField *chargerNameLabel;
+@property(nonatomic, strong) NSTextField *chargerNameValueLabel;
 @property(nonatomic, strong) NSTextField *runtimeLabel;
 @property(nonatomic, strong) NSTextField *runtimeValueLabel;
 @property(nonatomic, strong) NSTextField *batteryValueLabel;
@@ -1009,7 +1024,7 @@ static NSImage *WNBrandMarkImage(BOOL onPower, BOOL charging) {
     [self addSubview:self.monitoringToggle];
 
     self.headlineLabel = [self labelWithString:@"--"
-                                          size:11
+                                          size:12
                                         weight:NSFontWeightSemibold
                                          color:WNColor(0.16, 0.13, 0.11, 1.0)];
     self.headlineLabel.alignment = NSTextAlignmentRight;
@@ -1020,80 +1035,90 @@ static NSImage *WNBrandMarkImage(BOOL onPower, BOOL charging) {
     [self addSubview:self.wattsView];
 
     self.subtitleLabel = [self labelWithString:@"--"
-                                          size:13
-                                        weight:NSFontWeightMedium
+                                          size:11
+                                        weight:NSFontWeightSemibold
                                          color:WNColor(0.16, 0.13, 0.11, 1.0)];
     self.subtitleLabel.alignment = NSTextAlignmentRight;
     [self addSubview:self.subtitleLabel];
 
     self.captionLabel = [self labelWithString:@"Waiting for telemetry"
                                          size:10
-                                       weight:NSFontWeightMedium
+                                       weight:NSFontWeightRegular
                                         color:WNColor(0.55, 0.58, 0.63, 1.0)];
     [self addSubview:self.captionLabel];
     self.captionHeightConstraint = [self.captionLabel.heightAnchor constraintEqualToConstant:0];
 
-    NSTextField *setupLabel = [self labelWithString:@"Charger Setup"
-                                               size:11
-                                             weight:NSFontWeightMedium
-                                              color:WNColor(0.43, 0.47, 0.52, 1.0)];
-    [self addSubview:setupLabel];
+    NSColor *rowLabelColor = WNColor(0.43, 0.47, 0.52, 1.0);
+    NSColor *rowValueColor = WNColor(0.16, 0.13, 0.11, 1.0);
+
+    self.chargerNameLabel = [self labelWithString:@"Charger"
+                                             size:11
+                                           weight:NSFontWeightRegular
+                                            color:rowLabelColor];
+    [self addSubview:self.chargerNameLabel];
+
+    self.chargerNameValueLabel = [self labelWithString:@"--"
+                                                  size:11
+                                                weight:NSFontWeightSemibold
+                                                 color:rowValueColor];
+    self.chargerNameValueLabel.alignment = NSTextAlignmentRight;
+    [self addSubview:self.chargerNameValueLabel];
 
     NSTextField *sourceLabel = [self labelWithString:@"Power Source"
                                                 size:11
-                                              weight:NSFontWeightMedium
-                                               color:WNColor(0.43, 0.47, 0.52, 1.0)];
+                                              weight:NSFontWeightRegular
+                                               color:rowLabelColor];
     [self addSubview:sourceLabel];
 
     self.runtimeLabel = [self labelWithString:@"Predicted Runtime"
                                          size:11
-                                       weight:NSFontWeightMedium
-                                        color:WNColor(0.43, 0.47, 0.52, 1.0)];
+                                       weight:NSFontWeightRegular
+                                        color:rowLabelColor];
     [self addSubview:self.runtimeLabel];
 
     self.runtimeValueLabel = [self labelWithString:@"--"
                                               size:11
                                             weight:NSFontWeightSemibold
-                                             color:WNColor(0.16, 0.13, 0.11, 1.0)];
+                                             color:rowValueColor];
     self.runtimeValueLabel.alignment = NSTextAlignmentRight;
     [self addSubview:self.runtimeValueLabel];
 
     NSTextField *timeToFullLabel = [self labelWithString:@"Time to Full"
                                                     size:11
-                                                  weight:NSFontWeightMedium
-                                                   color:WNColor(0.43, 0.47, 0.52, 1.0)];
+                                                  weight:NSFontWeightRegular
+                                                   color:rowLabelColor];
     [self addSubview:timeToFullLabel];
 
     self.timeToFullValueLabel = [self labelWithString:@"--"
                                                  size:11
                                                weight:NSFontWeightSemibold
-                                                color:WNColor(0.16, 0.13, 0.11, 1.0)];
+                                                color:rowValueColor];
     self.timeToFullValueLabel.alignment = NSTextAlignmentRight;
     [self addSubview:self.timeToFullValueLabel];
 
     NSTextField *chargerLabel = [self labelWithString:@"Charger Profile"
                                                  size:11
-                                               weight:NSFontWeightMedium
-                                                color:WNColor(0.43, 0.47, 0.52, 1.0)];
+                                               weight:NSFontWeightRegular
+                                                color:rowLabelColor];
     [self addSubview:chargerLabel];
 
     self.chargerValueLabel = [self labelWithString:@"--"
                                               size:11
                                             weight:NSFontWeightSemibold
-                                             color:WNColor(0.16, 0.13, 0.11, 1.0)];
+                                             color:rowValueColor];
     self.chargerValueLabel.alignment = NSTextAlignmentRight;
     [self addSubview:self.chargerValueLabel];
 
     NSTextField *monitoringLabel = [self labelWithString:@"Monitoring"
-                                                    size:10
-                                                  weight:NSFontWeightMedium
-                                                   color:WNColor(0.50, 0.53, 0.58, 1.0)];
+                                                    size:11
+                                                  weight:NSFontWeightRegular
+                                                   color:rowLabelColor];
     [self addSubview:monitoringLabel];
 
     NSView *divider = [[NSView alloc] initWithFrame:NSZeroRect];
     divider.translatesAutoresizingMaskIntoConstraints = NO;
     divider.wantsLayer = YES;
-    divider.layer.backgroundColor = WNColor(0.0, 0.0, 0.0, 0.07).CGColor;
+    divider.layer.backgroundColor = WNColor(0.0, 0.0, 0.0, 0.05).CGColor;
     [self addSubview:divider];
 
     [NSLayoutConstraint activateConstraints:@[
@@ -1110,13 +1135,13 @@ static NSImage *WNBrandMarkImage(BOOL onPower, BOOL charging) {
         [divider.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-16],
         [divider.heightAnchor constraintEqualToConstant:1],
 
-        [setupLabel.topAnchor constraintEqualToAnchor:divider.bottomAnchor constant:16],
-        [setupLabel.leadingAnchor constraintEqualToAnchor:self.leadingAnchor constant:16],
-        [self.headlineLabel.centerYAnchor constraintEqualToAnchor:setupLabel.centerYAnchor],
-        [self.headlineLabel.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-16],
-        [self.headlineLabel.leadingAnchor constraintGreaterThanOrEqualToAnchor:setupLabel.trailingAnchor constant:12],
+        [self.chargerNameLabel.topAnchor constraintEqualToAnchor:divider.bottomAnchor constant:16],
+        [self.chargerNameLabel.leadingAnchor constraintEqualToAnchor:self.leadingAnchor constant:16],
+        [self.chargerNameValueLabel.centerYAnchor constraintEqualToAnchor:self.chargerNameLabel.centerYAnchor],
+        [self.chargerNameValueLabel.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-16],
+        [self.chargerNameValueLabel.leadingAnchor constraintGreaterThanOrEqualToAnchor:self.chargerNameLabel.trailingAnchor constant:12],
 
-        [sourceLabel.topAnchor constraintEqualToAnchor:setupLabel.bottomAnchor constant:10],
+        [sourceLabel.topAnchor constraintEqualToAnchor:self.chargerNameLabel.bottomAnchor constant:10],
         [sourceLabel.leadingAnchor constraintEqualToAnchor:self.leadingAnchor constant:16],
         [self.subtitleLabel.centerYAnchor constraintEqualToAnchor:sourceLabel.centerYAnchor],
         [self.subtitleLabel.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-16],
@@ -1140,9 +1165,9 @@ static NSImage *WNBrandMarkImage(BOOL onPower, BOOL charging) {
         [self.chargerValueLabel.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-16],
         [self.chargerValueLabel.leadingAnchor constraintGreaterThanOrEqualToAnchor:chargerLabel.trailingAnchor constant:12],
 
-        [monitoringLabel.topAnchor constraintEqualToAnchor:chargerLabel.bottomAnchor constant:12],
+        [monitoringLabel.topAnchor constraintEqualToAnchor:chargerLabel.bottomAnchor constant:10],
         [monitoringLabel.leadingAnchor constraintEqualToAnchor:self.leadingAnchor constant:16],
-        [monitoringLabel.bottomAnchor constraintEqualToAnchor:self.bottomAnchor constant:-14],
+        [monitoringLabel.bottomAnchor constraintEqualToAnchor:self.bottomAnchor constant:-16],
         [self.monitoringToggle.centerYAnchor constraintEqualToAnchor:monitoringLabel.centerYAnchor],
         [self.monitoringToggle.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-16],
     ]];
@@ -1156,11 +1181,12 @@ static NSImage *WNBrandMarkImage(BOOL onPower, BOOL charging) {
                            color:(NSColor *)color {
     NSTextField *label = [NSTextField labelWithString:string];
     label.translatesAutoresizingMaskIntoConstraints = NO;
-    label.font = [NSFont systemFontOfSize:size weight:weight];
+    label.font = WNUIFont(size, weight);
     label.textColor = color;
     label.lineBreakMode = NSLineBreakByTruncatingTail;
     return label;
 }
+
 
 - (NSString *)detailTextForSnapshot:(PowerSnapshot *)snapshot {
     NSMutableArray<NSString *> *parts = [NSMutableArray array];
@@ -1256,7 +1282,10 @@ static NSImage *WNBrandMarkImage(BOOL onPower, BOOL charging) {
     (void)samples;
     double displayWatts = snapshot.onAC ? fabs(snapshot.watts) : -fabs(snapshot.watts);
     [self.wattsView setWatts:displayWatts];
-    self.headlineLabel.stringValue = snapshot.chargerDisplayName.length > 0 ? snapshot.chargerDisplayName : (snapshot.onAC ? @"Charger Setup" : @"Battery Power");
+    NSString *headline = snapshot.chargerDisplayName.length > 0 ? snapshot.chargerDisplayName : (snapshot.onAC ? @"Charger Setup" : @"Battery Power");
+    self.headlineLabel.stringValue = headline;
+
+    self.chargerNameValueLabel.stringValue = headline.length > 0 ? headline : @"--";
     self.subtitleLabel.stringValue = monitoringEnabled ? [self powerSourceTextForSnapshot:snapshot] : @"Monitoring Paused";
     self.captionLabel.stringValue = @"";
     self.captionLabel.hidden = YES;

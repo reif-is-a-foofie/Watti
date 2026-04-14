@@ -12,6 +12,8 @@
 	<string>local.reify.Watti</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
+	<key>CFBundleIconFile</key>
+	<string>Watti</string>
 	<key>CFBundleName</key>
 	<string>Watti</string>
 	<key>CFBundlePackageType</key>

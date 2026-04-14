@@ -2,9 +2,12 @@
 
 Menu bar app that shows power/wattage details on macOS.
 
+Sponsored by **The Good Project** — contact `reif@thegoodproject.net`.
+
 ## Local build
 
 ```bash
+./scripts/make_icon.sh
 ./build.sh
 open build/Watti.app
 ```
