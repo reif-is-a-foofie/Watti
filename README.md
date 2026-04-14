@@ -21,6 +21,8 @@ reif@thegoodproject.net
 
 Menu bar app that shows power/wattage details on macOS.
 
+![Watti popover: live watts, named charger, power source, unplugged runtime (TTL), time to full, and charger profile](Assets/watti-screenshot.png)
+
 Sponsored by **The Good Project** — contact `reif@thegoodproject.net`.
 
 ## Install (no Terminal)
