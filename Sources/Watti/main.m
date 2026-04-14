@@ -979,7 +979,6 @@ static NSImage *WNBrandMarkImage(BOOL onPower, BOOL charging) {
 
 @interface PowerNoteView : NSView
 @property(nonatomic, strong) RollingWattsView *wattsView;
-@property(nonatomic, strong) NSTextField *headlineLabel;
 @property(nonatomic, strong) NSTextField *subtitleLabel;
 @property(nonatomic, strong) NSTextField *captionLabel;
 @property(nonatomic, strong) NSLayoutConstraint *captionHeightConstraint;
@@ -1022,13 +1021,6 @@ static NSImage *WNBrandMarkImage(BOOL onPower, BOOL charging) {
     self.monitoringToggle.target = self;
     self.monitoringToggle.action = @selector(monitoringToggleChanged:);
     [self addSubview:self.monitoringToggle];
-
-    self.headlineLabel = [self labelWithString:@"--"
-                                          size:12
-                                        weight:NSFontWeightSemibold
-                                         color:WNColor(0.16, 0.13, 0.11, 1.0)];
-    self.headlineLabel.alignment = NSTextAlignmentRight;
-    [self addSubview:self.headlineLabel];
 
     self.wattsView = [[RollingWattsView alloc] initWithFrame:NSZeroRect];
     self.wattsView.translatesAutoresizingMaskIntoConstraints = NO;
@@ -1283,8 +1275,6 @@ static NSImage *WNBrandMarkImage(BOOL onPower, BOOL charging) {
     double displayWatts = snapshot.onAC ? fabs(snapshot.watts) : -fabs(snapshot.watts);
     [self.wattsView setWatts:displayWatts];
     NSString *headline = snapshot.chargerDisplayName.length > 0 ? snapshot.chargerDisplayName : (snapshot.onAC ? @"Charger Setup" : @"Battery Power");
-    self.headlineLabel.stringValue = headline;
-
     self.chargerNameValueLabel.stringValue = headline.length > 0 ? headline : @"--";
     self.subtitleLabel.stringValue = monitoringEnabled ? [self powerSourceTextForSnapshot:snapshot] : @"Monitoring Paused";
     self.captionLabel.stringValue = @"";
