@@ -23,7 +23,9 @@ Menu bar app that shows power/wattage details on macOS.
 
 <img src="Assets/Watti.iconset/icon_256x256@2x.png" alt="Watti app icon" width="128" height="128" />
 
-![Watti popover: live watts, named charger, power source, unplugged runtime (TTL), time to full, and charger profile](Assets/watti-screenshot.png)
+![Watti popover on AC: live watts, named charger, power source, unplugged runtime (TTL), time to full, and charger profile](Assets/watti-screenshot.png)
+
+![Watti on battery power: discharge watts, charger setup, battery percentage, battery life, time to full, charger profile](Assets/watti-screenshot-battery.png)
 
 ![Fully charged with power boost](Assets/watti-fully-charged.png)
 
