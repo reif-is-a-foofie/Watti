@@ -19,7 +19,7 @@ reif@thegoodproject.net
 
 ---
 
-Menu bar app that shows power/wattage details on macOS.
+**Watti** is a macOS menu bar app: live input watts, charger names you save, and unplugged runtime (TTL) when you are on battery.
 
 <img src="Assets/Watti.iconset/icon_256x256@2x.png" alt="Watti app icon" width="128" height="128" />
 
