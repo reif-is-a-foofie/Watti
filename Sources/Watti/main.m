@@ -135,62 +135,6 @@ static void WNAllowValueToTruncateHorizontally(NSControl *field) {
     [field setContentCompressionResistancePriority:NSLayoutPriorityDefaultLow forOrientation:NSLayoutConstraintOrientationHorizontal];
 }
 
-static BOOL WNBundleIsInsideApplications(void) {
-    NSString *bundlePath = NSBundle.mainBundle.bundlePath ?: @"";
-    return [bundlePath hasPrefix:@"/Applications/"] || [bundlePath isEqualToString:@"/Applications/Watti.app"];
-}
-
-static void WNPromptMoveToApplicationsIfNeeded(void) {
-    if (WNBundleIsInsideApplications()) {
-        return;
-    }
-
-    NSAlert *alert = [NSAlert new];
-    alert.messageText = @"Move Watti to Applications?";
-    alert.informativeText = @"Watti works best from your Applications folder (and macOS requires it for “Open at login”).\n\nMove it now?";
-    [alert addButtonWithTitle:@"Move to Applications"];
-    [alert addButtonWithTitle:@"Not now"];
-    alert.alertStyle = NSAlertStyleInformational;
-
-    NSModalResponse response = [alert runModal];
-    if (response != NSAlertFirstButtonReturn) {
-        return;
-    }
-
-    NSURL *sourceURL = NSBundle.mainBundle.bundleURL;
-    NSURL *destURL = [NSURL fileURLWithPath:@"/Applications/Watti.app"];
-    if (sourceURL == nil || destURL == nil) {
-        return;
-    }
-
-    NSFileManager *fm = [NSFileManager defaultManager];
-    NSError *error = nil;
-
-    if ([fm fileExistsAtPath:destURL.path]) {
-        if (![fm removeItemAtURL:destURL error:&error]) {
-            NSAlert *fail = [NSAlert new];
-            fail.messageText = @"Couldn’t replace the existing Watti.app";
-            fail.informativeText = error.localizedDescription ?: @"Please delete the old copy in Applications and try again.";
-            [fail addButtonWithTitle:@"OK"];
-            [fail runModal];
-            return;
-        }
-    }
-
-    error = nil;
-    if (![fm copyItemAtURL:sourceURL toURL:destURL error:&error]) {
-        NSAlert *fail = [NSAlert new];
-        fail.messageText = @"Couldn’t move Watti to Applications";
-        fail.informativeText = error.localizedDescription ?: @"Try dragging Watti into Applications manually.";
-        [fail addButtonWithTitle:@"OK"];
-        [fail runModal];
-        return;
-    }
-
-    [[NSWorkspace sharedWorkspace] openURL:destURL];
-    [NSApp terminate:nil];
-}
-
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 
@@ -1404,29 +1348,25 @@ static NSImage *WNBrandMarkImage(BOOL onPower, BOOL charging) {
         [self.chargerNameValueLabel.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-16],
         [self.chargerNameValueLabel.leadingAnchor constraintGreaterThanOrEqualToAnchor:self.chargerNameLabel.trailingAnchor constant:12],
 
-        [sourceLabel.topAnchor constraintGreaterThanOrEqualToAnchor:self.chargerNameLabel.bottomAnchor constant:10],
-        [sourceLabel.topAnchor constraintGreaterThanOrEqualToAnchor:self.chargerNameValueLabel.bottomAnchor constant:10],
+        [sourceLabel.topAnchor constraintEqualToAnchor:self.chargerNameLabel.bottomAnchor constant:10],
         [sourceLabel.leadingAnchor constraintEqualToAnchor:self.leadingAnchor constant:16],
         [self.subtitleLabel.centerYAnchor constraintEqualToAnchor:sourceLabel.centerYAnchor],
         [self.subtitleLabel.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-16],
         [self.subtitleLabel.leadingAnchor constraintGreaterThanOrEqualToAnchor:sourceLabel.trailingAnchor constant:12],
 
-        [self.runtimeLabel.topAnchor constraintGreaterThanOrEqualToAnchor:sourceLabel.bottomAnchor constant:10],
-        [self.runtimeLabel.topAnchor constraintGreaterThanOrEqualToAnchor:self.subtitleLabel.bottomAnchor constant:10],
+        [self.runtimeLabel.topAnchor constraintEqualToAnchor:sourceLabel.bottomAnchor constant:10],
         [self.runtimeLabel.leadingAnchor constraintEqualToAnchor:self.leadingAnchor constant:16],
         [self.runtimeValueLabel.centerYAnchor constraintEqualToAnchor:self.runtimeLabel.centerYAnchor],
         [self.runtimeValueLabel.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-16],
         [self.runtimeValueLabel.leadingAnchor constraintGreaterThanOrEqualToAnchor:self.runtimeLabel.trailingAnchor constant:12],
 
-        [timeToFullLabel.topAnchor constraintGreaterThanOrEqualToAnchor:self.runtimeLabel.bottomAnchor constant:10],
-        [timeToFullLabel.topAnchor constraintGreaterThanOrEqualToAnchor:self.runtimeValueLabel.bottomAnchor constant:10],
+        [timeToFullLabel.topAnchor constraintEqualToAnchor:self.runtimeLabel.bottomAnchor constant:10],
         [timeToFullLabel.leadingAnchor constraintEqualToAnchor:self.leadingAnchor constant:16],
         [self.timeToFullValueLabel.centerYAnchor constraintEqualToAnchor:timeToFullLabel.centerYAnchor],
         [self.timeToFullValueLabel.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-16],
         [self.timeToFullValueLabel.leadingAnchor constraintGreaterThanOrEqualToAnchor:timeToFullLabel.trailingAnchor constant:12],
 
-        [chargerLabel.topAnchor constraintGreaterThanOrEqualToAnchor:timeToFullLabel.bottomAnchor constant:10],
-        [chargerLabel.topAnchor constraintGreaterThanOrEqualToAnchor:self.timeToFullValueLabel.bottomAnchor constant:10],
+        [chargerLabel.topAnchor constraintEqualToAnchor:timeToFullLabel.bottomAnchor constant:10],
         [chargerLabel.leadingAnchor constraintEqualToAnchor:self.leadingAnchor constant:16],
         [self.chargerValueLabel.centerYAnchor constraintEqualToAnchor:chargerLabel.centerYAnchor],
         [self.chargerValueLabel.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-16],
@@ -1576,7 +1516,8 @@ static NSImage *WNBrandMarkImage(BOOL onPower, BOOL charging) {
 @property(nonatomic, strong) NSTextField *titleLabel;
 @property(nonatomic, strong) NSTextField *aboutLabel;
 @property(nonatomic, strong) NSButton *legalButton;
-@property(nonatomic, strong) NSButton *loginButton;
+@property(nonatomic, strong) NSTextField *loginCaptionLabel;
+@property(nonatomic, strong) NSSwitch *loginSwitch;
 @property(nonatomic, strong) NSButton *monitoringButton;
 @property(nonatomic, strong) NSButton *siteButton;
 @property(nonatomic, strong) NSButton *emailButton;
@@ -1645,9 +1586,18 @@ static NSImage *WNBrandMarkImage(BOOL onPower, BOOL charging) {
     self.legalButton = [self makeRowButton:@"Legal & disclaimer" action:@selector(legalPressed:)];
     [self addSubview:self.legalButton];
 
-    self.loginButton = [self makeRowButton:@"" action:@selector(loginPressed:)];
-    [self addSubview:self.loginButton];
-    [self refreshLoginItemButton];
+    self.loginCaptionLabel = [NSTextField labelWithString:@"Open at login"];
+    self.loginCaptionLabel.translatesAutoresizingMaskIntoConstraints = NO;
+    self.loginCaptionLabel.font = WNUIFont(12, NSFontWeightRegular);
+    self.loginCaptionLabel.textColor = WNColor(0.16, 0.13, 0.11, 1.0);
+    [self addSubview:self.loginCaptionLabel];
+
+    self.loginSwitch = [[NSSwitch alloc] initWithFrame:NSZeroRect];
+    self.loginSwitch.translatesAutoresizingMaskIntoConstraints = NO;
+    self.loginSwitch.target = self;
+    self.loginSwitch.action = @selector(loginSwitchChanged:);
+    [self.loginSwitch setState:(WNLoginItemEnabled() ? NSControlStateValueOn : NSControlStateValueOff)];
+    [self addSubview:self.loginSwitch];
 
     self.monitoringButton = [self makeRowButton:@"Stop Monitoring" action:@selector(monitoringPressed:)];
     [self addSubview:self.monitoringButton];
@@ -1684,11 +1634,15 @@ static NSImage *WNBrandMarkImage(BOOL onPower, BOOL charging) {
         [self.legalButton.leadingAnchor constraintEqualToAnchor:self.leadingAnchor constant:16],
         [self.legalButton.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-16],
 
-        [self.loginButton.topAnchor constraintEqualToAnchor:self.legalButton.bottomAnchor constant:12],
-        [self.loginButton.leadingAnchor constraintEqualToAnchor:self.leadingAnchor constant:16],
-        [self.loginButton.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-16],
+        [self.loginCaptionLabel.topAnchor constraintEqualToAnchor:self.legalButton.bottomAnchor constant:12],
+        [self.loginCaptionLabel.leadingAnchor constraintEqualToAnchor:self.leadingAnchor constant:16],
+        [self.loginCaptionLabel.trailingAnchor constraintLessThanOrEqualToAnchor:self.loginSwitch.leadingAnchor constant:-12],
 
-        [self.monitoringButton.topAnchor constraintEqualToAnchor:self.loginButton.bottomAnchor constant:10],
+        [self.loginSwitch.centerYAnchor constraintEqualToAnchor:self.loginCaptionLabel.centerYAnchor],
+        [self.loginSwitch.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-16],
+
+        [self.monitoringButton.topAnchor constraintGreaterThanOrEqualToAnchor:self.loginCaptionLabel.bottomAnchor constant:10],
+        [self.monitoringButton.topAnchor constraintGreaterThanOrEqualToAnchor:self.loginSwitch.bottomAnchor constant:10],
         [self.monitoringButton.leadingAnchor constraintEqualToAnchor:self.leadingAnchor constant:16],
         [self.monitoringButton.trailingAnchor constraintEqualToAnchor:self.trailingAnchor constant:-16],
 
@@ -1713,29 +1667,23 @@ static NSImage *WNBrandMarkImage(BOOL onPower, BOOL charging) {
     self.monitoringButton.title = enabled ? @"Stop Monitoring" : @"Start Monitoring";
 }
 
-- (void)refreshLoginItemButton {
-    BOOL enabled = WNLoginItemEnabled();
-    self.loginButton.title = enabled ? @"Open at login: On" : @"Open at login: Off";
+- (void)refreshLoginItemSwitch {
+    [self.loginSwitch setState:(WNLoginItemEnabled() ? NSControlStateValueOn : NSControlStateValueOff)];
 }
 
-- (void)loginPressed:(id)sender {
+- (void)loginSwitchChanged:(id)sender {
     (void)sender;
-    if (!WNBundleIsInsideApplications()) {
-        WNPromptMoveToApplicationsIfNeeded();
-        [self refreshLoginItemButton];
-        return;
-    }
-
-    BOOL wantOn = !WNLoginItemEnabled();
+    BOOL wantOn = (self.loginSwitch.state == NSControlStateValueOn);
     if (!WNSetLoginItemEnabled(wantOn)) {
+        [self.loginSwitch setState:(wantOn ? NSControlStateValueOff : NSControlStateValueOn)];
         NSAlert *alert = [NSAlert new];
         alert.messageText = @"Couldn’t change “Open at login”";
-        alert.informativeText = @"Watti needs to be in Applications for macOS to manage login items.\n\nMove Watti into Applications, then try again. You can also add it manually in System Settings → General → Login Items.";
+        alert.informativeText = @"Try again after dragging Watti into Applications. You can also add it manually in System Settings → General → Login Items.";
         alert.alertStyle = NSAlertStyleInformational;
         [alert addButtonWithTitle:@"OK"];
         [alert runModal];
     } else {
-        [self refreshLoginItemButton];
+        [self refreshLoginItemSwitch];
     }
 }
 
@@ -1886,7 +1834,7 @@ static NSImage *WNBrandMarkImage(BOOL onPower, BOOL charging) {
     self.powerView.hidden = YES;
     self.settingsView.hidden = NO;
     [self.settingsView updateMonitoringButtonForMonitoringEnabled:self.lastMonitoringEnabled];
-    [self.settingsView refreshLoginItemButton];
+    [self.settingsView refreshLoginItemSwitch];
 }
 
 - (void)applySnapshot:(PowerSnapshot *)snapshot monitoringEnabled:(BOOL)monitoringEnabled samples:(NSArray<NSNumber *> *)samples {
