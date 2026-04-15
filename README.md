@@ -90,8 +90,8 @@ Sponsored by **The Good Project** — contact `reif@thegoodproject.net`.
 ## Install (no Terminal)
 
 1. Download **`Watti-macos.tar.gz`** — direct link to the latest release asset:  
-   https://github.com/reif-is-a-foofie/watti/releases/latest/download/Watti-macos.tar.gz  
-   (If that 404s, open [Releases](https://github.com/reif-is-a-foofie/watti/releases) and download `Watti-macos.tar.gz` from the newest version — the link works once a release includes that file.)
+   https://github.com/reif-is-a-foofie/Watti/releases/latest/download/Watti-macos.tar.gz  
+   (If that 404s, open [Releases](https://github.com/reif-is-a-foofie/Watti/releases) and download `Watti-macos.tar.gz` from the newest version — the link works once a release includes that file.)
 2. Double-click the archive; macOS unpacks it beside the download.
 3. Drag **`Watti.app`** into **Applications**.
 4. Open it from Applications the first time (right-click → **Open** if Gatekeeper complains about an unsigned download).
