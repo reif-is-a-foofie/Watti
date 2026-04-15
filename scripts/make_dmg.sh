@@ -65,24 +65,26 @@ tell application "Finder"
     set current view of container window to icon view
     set toolbar visible of container window to false
     set statusbar visible of container window to false
-    set bounds of container window to {200, 200, 900, 650}
+    set bounds of container window to {200, 200, 900, 680}
 
     set theViewOptions to the icon view options of container window
     set arrangement of theViewOptions to not arranged
-    set icon size of theViewOptions to 128
+    set icon size of theViewOptions to 120
+    set text size of theViewOptions to 12
+    set shows item info of theViewOptions to false
 
     set background picture of theViewOptions to (POSIX file "${MOUNT_POINT}/.background/background.png") as alias
     delay 0.5
 
     try
-      set position of file "Watti.app" of container window to {160, 240}
+      set position of file "Watti.app" of container window to {220, 360}
     end try
     try
-      set position of item "Applications" of container window to {560, 240}
+      set position of item "Applications" of container window to {680, 360}
     end try
     if exists file "${PRIVACY_WEBLOC_NAME}" of container window then
       try
-        set position of file "${PRIVACY_WEBLOC_NAME}" of container window to {360, 430}
+        set position of file "${PRIVACY_WEBLOC_NAME}" of container window to {450, 560}
       end try
     end if
     update without registering applications
