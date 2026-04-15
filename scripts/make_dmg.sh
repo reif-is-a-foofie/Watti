@@ -8,7 +8,7 @@ DMG_PATH="$OUT_DIR/Watti.dmg"
 VOL_NAME="Watti"
 STAGE_DIR="$OUT_DIR/dmg-stage"
 BACKGROUND_SRC="$ROOT_DIR/Assets/dmg-open-anyway.png"
-PRIVACY_WEBLOC_NAME="Open Privacy & Security.webloc"
+PRIVACY_HELPER_APP_NAME="Open Privacy & Security.app"
 
 if [[ ! -d "$APP_PATH" ]]; then
   echo "Missing $APP_PATH (run ./build.sh first)" >&2
@@ -30,17 +30,18 @@ ln -s /Applications "$STAGE_DIR/Applications"
 mkdir -p "$STAGE_DIR/.background"
 cp "$BACKGROUND_SRC" "$STAGE_DIR/.background/background.png"
 
-# Clickable deep-link into System Settings → Privacy & Security.
-cat >"$STAGE_DIR/$PRIVACY_WEBLOC_NAME" <<'EOF'
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-  <key>URL</key>
-  <string>x-apple.systempreferences:com.apple.preference.security?Privacy</string>
-</dict>
-</plist>
+# Clickable helper app that opens System Settings → Privacy & Security.
+cat >"$OUT_DIR/open-privacy-security.applescript" <<'EOF'
+on run
+	try
+		do shell script "open \"x-apple.systempreferences:com.apple.preference.security?Privacy\""
+	end try
+end run
 EOF
+
+rm -rf "$STAGE_DIR/$PRIVACY_HELPER_APP_NAME"
+osacompile -o "$STAGE_DIR/$PRIVACY_HELPER_APP_NAME" "$OUT_DIR/open-privacy-security.applescript" >/dev/null
+rm -f "$OUT_DIR/open-privacy-security.applescript"
 
 rm -f "$DMG_PATH"
 
@@ -82,9 +83,9 @@ tell application "Finder"
     try
       set position of item "Applications" of container window to {680, 360}
     end try
-    if exists file "${PRIVACY_WEBLOC_NAME}" of container window then
+    if exists item "${PRIVACY_HELPER_APP_NAME}" of container window then
       try
-        set position of file "${PRIVACY_WEBLOC_NAME}" of container window to {450, 560}
+        set position of item "${PRIVACY_HELPER_APP_NAME}" of container window to {450, 560}
       end try
     end if
     update without registering applications
