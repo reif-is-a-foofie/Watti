@@ -8,7 +8,6 @@ DMG_PATH="$OUT_DIR/Watti.dmg"
 VOL_NAME="Watti"
 STAGE_DIR="$OUT_DIR/dmg-stage"
 BACKGROUND_SRC="$ROOT_DIR/Assets/dmg-open-anyway.png"
-PRIVACY_HELPER_APP_NAME="Open Privacy & Security.app"
 
 if [[ ! -d "$APP_PATH" ]]; then
   echo "Missing $APP_PATH (run ./build.sh first)" >&2
@@ -30,18 +29,18 @@ ln -s /Applications "$STAGE_DIR/Applications"
 mkdir -p "$STAGE_DIR/.background"
 cp "$BACKGROUND_SRC" "$STAGE_DIR/.background/background.png"
 
-# Clickable helper app that opens System Settings → Privacy & Security.
-cat >"$OUT_DIR/open-privacy-security.applescript" <<'EOF'
-on run
-	try
-		do shell script "open \"x-apple.systempreferences:com.apple.preference.security?Privacy\""
-	end try
-end run
-EOF
+# Plain-text instructions (safe to open without notarization).
+cat >"$STAGE_DIR/README-FIRST.txt" <<'EOF'
+Watti install steps
 
-rm -rf "$STAGE_DIR/$PRIVACY_HELPER_APP_NAME"
-osacompile -o "$STAGE_DIR/$PRIVACY_HELPER_APP_NAME" "$OUT_DIR/open-privacy-security.applescript" >/dev/null
-rm -f "$OUT_DIR/open-privacy-security.applescript"
+1) Drag Watti.app to Applications
+2) Try opening Watti
+3) If macOS blocks it:
+   System Settings → Privacy & Security → Open Anyway
+4) Open Watti again
+
+This project is not notarized (no Apple Developer ID), so macOS may warn on first run.
+EOF
 
 rm -f "$DMG_PATH"
 
@@ -83,11 +82,9 @@ tell application "Finder"
     try
       set position of item "Applications" of container window to {680, 360}
     end try
-    if exists item "${PRIVACY_HELPER_APP_NAME}" of container window then
-      try
-        set position of item "${PRIVACY_HELPER_APP_NAME}" of container window to {450, 560}
-      end try
-    end if
+    try
+      set position of file "README-FIRST.txt" of container window to {450, 560}
+    end try
     update without registering applications
   end tell
 end tell
